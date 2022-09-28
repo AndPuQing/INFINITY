@@ -284,7 +284,7 @@ def inflation_sample(
         The dimension of the mesh, can be 2 or 3
 
     mode : str
-        The mode of sampling, can be "uniform" or "poisson_disk"
+        The mode of sampling, can be "uniform" or "poisson_disk" for 3D mesh, and "uniform" or "grid" for 2D mesh
 
     seed : int
         The seed of random number generator
@@ -300,14 +300,13 @@ def inflation_sample(
         density = [density]
     if len(dis) != len(density):
         raise ValueError("The length of dis and density must be equal")
-    new_mesh = mesh
     pcs = []
     for d, n in zip(dis, density):
         if dim == 2:
-            new_mesh = offset(new_mesh, d)
+            new_mesh = offset(mesh, d)
             pc = edge_sample(new_mesh, n, mode, seed)
         else:
-            new_mesh = inflation(new_mesh, d)
+            new_mesh = inflation(mesh, d)
             pc = sample_points(new_mesh, n, mode=mode, seed=seed)
         pc.paint_uniform_color(np.random.random(3))
         pcs.append(pc)

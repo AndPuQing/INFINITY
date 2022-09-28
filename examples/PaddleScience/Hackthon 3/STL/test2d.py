@@ -6,8 +6,8 @@ mesh = o3d.io.read_triangle_mesh("./example/2d.stl")
 
 pcs = inf.inflation_sample(
     mesh,
-    dis=np.ones(2) * 1,
-    density=np.linspace(10, 5, 2),
+    dis=np.linspace(0.1, 0.5, 4),
+    density=np.linspace(10, 5, 4),
     mode="uniform",
     dim=2,
 )

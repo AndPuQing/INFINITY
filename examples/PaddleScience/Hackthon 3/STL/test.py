@@ -7,7 +7,7 @@ mesh = o3d.io.read_triangle_mesh("./example/wing.stl")
 
 pcs = inf.inflation_sample(
     mesh,
-    dis=np.ones(4) * 0.1,
+    dis=np.linspace(0.1, 0.5, 4),
     density=np.linspace(50, 10, 4),
     mode="uniform",
     seed=0,

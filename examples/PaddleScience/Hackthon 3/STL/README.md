@@ -1,6 +1,85 @@
+[TOC]
+
 # Inflation
 
 该函数库主要实现了读入STL 几何图形，并通过外法向量进行外扩的功能。
+
+## inflation_sample
+
+该函数为主要函数，实现了读入STL 几何图形，并通过外法向量进行外扩的功能。
+
+```python
+def inflation_sample(
+    mesh,
+    dis=(float, list, np.ndarray),
+    density=(float, list, np.ndarray),
+    dim=3,
+    mode="uniform",
+    seed=-1,
+):
+    """
+    Inflation the mesh and sample points from the inflated mesh
+
+    Parameters
+    ----------
+    mesh : open3d.geometry.TriangleMesh
+
+    dis : float or list or np.ndarray
+        The distance to inflate
+
+    density : float or list or np.ndarray
+        The density of points to be sampled
+
+    dim : int
+        The dimension of the mesh, can be 2 or 3
+
+    mode : str
+        The mode of sampling, can be "uniform" or "poisson_disk" for 3D mesh, and "uniform" or "grid" for 2D mesh
+
+    seed : int
+        The seed of random number generator
+
+    Returns
+    -------
+    open3d.geometry.PointCloud
+    """
+```
+
+该函数输入一个三角网格，以及外扩距离序列，采样密度序列，输出一个采样点云。
+
+外扩距离与采样密度序列可以是单个数值，也可以是序列，如果是序列，则会对序列中的每个数值进行外扩与采样，最后将所有采样点合并，输出每一层的采样点云列表。以下是序列例子：
+
+```python
+dis = [1, 2] # 第一层外扩1，第二层外扩2
+density = [0.1, 0.1] # 第一层采样密度为0.1，第二层采样密度为0.1
+
+dis = np.arange(1, 5, 0.2) # 外扩1 ~ 5距离，每层间隔为0.2
+density =  np.linspace(10, 5, 4) # 采样密度从10 ~ 5，每层衰弱
+```
+
+> 注意保持dis与density序列长度一致
+
+### Example
+
+```python
+import open3d as o3d
+import inflation as inf
+import numpy as np
+
+mesh = o3d.io.read_triangle_mesh("./example/wing.stl")
+
+pcs = inf.inflation_sample(
+    mesh,
+    dis=np.linspace(0.1, 0.5, 4),
+    density=np.linspace(50, 10, 4),
+    mode="uniform",
+    seed=0,
+)
+
+o3d.visualization.draw_geometries(pcs)
+```
+
+![](./img/inflation_sample.png)
 
 ## inflation
 
@@ -23,9 +102,10 @@ def inflation(mesh, dis):
     """
 ```
 
-该函数输入一个三角网格，以及一个外扩距离，输出一个外扩后的三角网格。
+该函数输入一个三角网格，输出一个与原三角面外扩 `dis` 距离的三角网格。如下图所示：
+![](./img/inflation.png)
 
-## Example
+### Example
 
 ```python
 import open3d as o3d
@@ -48,7 +128,7 @@ o3d.visualization.draw_geometries([mesh_inflated], mesh_show_wireframe=True)
 ## sample_points
 
 ```python
-def sample_points(mesh, number_of_points=100, mode="uniform", seed=-1):
+def sample_points(mesh, density=1, mode="uniform", seed=-1):
     """
     Sample points from the mesh
 
@@ -73,11 +153,11 @@ def sample_points(mesh, number_of_points=100, mode="uniform", seed=-1):
     """
 ```
 
-该函数输入一个三角网格，以及一个采样点数目，输出一个采样点云。
+该函数输入一个三角网格，以及采样密度，输出一个采样点云。
 
-对open3D中的采样函数进行了封装，定义了 density 量，其含义为单位面积采样点数目。
+**密度其含义为单位面积采样点数目**，最终采样点的数目为 density * mesh_area，即密度乘以三角面表面积。
 
-## Example
+### Example
 
 ```python
 import open3d as o3d
@@ -96,65 +176,88 @@ o3d.visualization.draw_geometries([points])
 
 ---
 
-## inflation_sample
+## offset
 
 ```python
-def inflation_sample(
-    mesh,
-    dis=(float, list, np.ndarray),
-    density=(float, list, np.ndarray),
-    mode="uniform",
-    seed=-1,
-):
+def offset(mesh, dis):
     """
-    Inflation the mesh and sample points from the inflated mesh
+    Offset the 2D mesh
 
     Parameters
     ----------
     mesh : open3d.geometry.TriangleMesh
+        The mesh to be offset
 
-    dis : float or list or np.ndarray
-        The distance to inflate
-
-    density : float or list or np.ndarray
-        The density of points to be sampled
-
-    mode : str
-        The mode of sampling, can be "uniform" or "poisson_disk"
-
-    seed : int
-        The seed of random number generator
+    dis : float
+        The distance to offset
 
     Returns
     -------
-    open3d.geometry.PointCloud
+    open3d.geometry.TriangleMesh
     """
 ```
 
-该函数输入一个三角网格，以及外扩距离序列（间隔距离），采样密度序列，输出一个采样点云。
+该函数输入一个二维三角网格，输出一个与原三角面边缘外扩 `dis` 距离的三角网格，如下图所示。
 
-## Example
+![](./img/2ddis.png)
+
+### Example
 
 ```python
 import open3d as o3d
-import inflation as inf
-import numpy as np
+from inflation import offset
 
-mesh = o3d.io.read_triangle_mesh("./example/wing")
+mesh = o3d.io.read_triangle_mesh("./example/2d.stl")
+mesh.compute_vertex_normals()
+mesh.paint_uniform_color([0.5, 0.5, 0.5])
+o3d.visualization.draw_geometries([mesh], mesh_show_wireframe=True)
 
-
-pcs = inf.inflation_sample(
-    mesh,
-    dis=np.ones(5) * 0.1,
-    density=np.linspace(1, 0.5, 5),
-    mode="uniform",
-    seed=0,
-)
-
-o3d.visualization.draw_geometries(pcs)
+mesh_inflated = offset(mesh, 0.01)
+o3d.visualization.draw_geometries([mesh_inflated], mesh_show_wireframe=True)
 ```
 
-![](./img/inflation_sample.png)
+---
+
+## edge_sample
+
+```python
+def edge_sample(mesh, density=1, mode="uniform", seed=-1):
+    """
+    Sample points from the 2D mesh edges
+
+    Parameters
+    ----------
+    mehs : open3d.geometry.TriangleMesh
+        The mesh to be sampled
+
+    density : int
+        The density of points to be sampled
+
+    mode : str
+        The mode of sampling, can be "uniform" or "grid"
+
+    seed : int
+        The seed of random number generator
+    """
+```
+
+对二维的几何体的边缘进行采样，输出采样点云。
+
+density 定义为单位距离采样点数目，最终采样点的数目为 density * mesh_edge_length，即密度乘以边长。
+
+### Example
+
+```python
+import open3d as o3d
+from inflation import edge_sample
+
+mesh = o3d.io.read_triangle_mesh("./example/2d.stl")
+
+points = edge_sample(mesh, 10, "uniform")
+o3d.visualization.draw_geometries([points])
+```
+
+![](./img/edge_sample.png)
 
 # 注意⚠️
 
